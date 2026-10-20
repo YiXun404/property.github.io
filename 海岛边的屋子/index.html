@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* 浏览器浅色模式 (Light Mode) 真实颜色 */
+      --browser-bg: #f1f3f4;
+      --browser-border: #dadce0;
+      --browser-text: #202124;
+      --browser-icon: #5f6368;
+      --browser-url-bg: #ffffff;
+      --browser-url-text: #202124;
+      --browser-hover: #e8eaed;
+      
+      /* 房产网页原有变量 (严格保持不变) */
+      --realty-bg: #fdfdfc;
+      --realty-text: #111111;
+      --realty-muted: #666666;
+      --realty-border: #e5e5e5;
+      --font-serif: "Cormorant Garamond", Georgia, serif;
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: var(--font-sans);
+      background-color: var(--browser-bg);
+    }
+
+    /* ================= 1. 拟真 APEX 浅色浏览器 UI ================= */
+    .browser-frame {
+      display: flex;
+      flex-direction: column;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* 地址栏区域 */
+    .browser-toolbar {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 16px;
+      background-color: var(--browser-bg);
+      border-bottom: 1px solid transparent;
+      z-index: 200;
+    }
+
+    .nav-icons {
+      display: flex;
+      gap: 12px;
+      color: var(--browser-icon);
+    }
+
+    .nav-icons svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .address-bar-container {
+      flex: 1;
+      height: 32px;
+      background-color: var(--browser-url-bg);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 8px;
+      border: 1px solid var(--browser-border);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    .ssl-icon {
+      width: 12px;
+      height: 12px;
+      fill: var(--browser-icon);
+    }
+    .ssl-icon.secure {
+      fill: #34a853; 
+    }
+
+    .address-text {
+      color: var(--browser-url-text);
+      font-size: 13px;
+      letter-spacing: 0.2px;
+      flex: 1;
+    }
+
+    .address-text span {
+      color: #9aa0a6;
+    }
+
+    /* 真实的书签栏与文件夹逻辑 */
+    .browser-bookmarks {
+      height: 36px;
+      background-color: var(--browser-bg);
+      border-bottom: 1px solid var(--browser-border);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      position: relative;
+      z-index: 200;
+    }
+
+    .bookmark-folder-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--browser-text);
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .bookmark-folder-btn:hover, .bookmark-folder-btn.active {
+      background-color: var(--browser-hover);
+    }
+
+    .bookmark-folder-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: var(--browser-icon);
+    }
+
+    /* 真实下拉菜单 (用来展示具体网址) */
+    .bookmark-dropdown {
+      position: absolute;
+      top: 36px;
+      left: 12px;
+      width: 320px;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+      border: 1px solid var(--browser-border);
+      padding: 6px 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-4px);
+      transition: all 0.15s ease;
+      z-index: 300;
+    }
+
+    .bookmark-dropdown.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    /* 下拉菜单里的网址选项 */
+    .dropdown-item {
+      padding: 8px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--browser-hover);
+    }
+
+    .dropdown-title {
+      font-size: 12px;
+      color: var(--browser-text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dropdown-title svg {
+      width: 14px;
+      height: 14px;
+      fill: #fbbc04;
+    }
+
+    .dropdown-url {
+      font-size: 11px;
+      color: #80868b;
+      padding-left: 22px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 视图视口 */
+    .browser-viewport {
+      flex: 1;
+      position: relative;
+      overflow-y: auto;
+      overflow-x: hidden;
+      background-color: #ffffff;
+      scroll-behavior: smooth;
+    }
+
+    .view-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      min-height: 100%;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease;
+    }
+    .view-layer.active {
+      opacity: 1;
+      visibility: visible;
+      position: relative; 
+    }
+
+    /* ================= 2. 视图一：APEX 默认搜索主页 ================= */
+    .apex-home {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 84px);
+      background-color: #ffffff;
+    }
+
+    .apex-logo {
+      font-size: 56px;
+      font-weight: 800;
+      color: var(--browser-text);
+      letter-spacing: 0.05em;
+      margin-bottom: 32px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .apex-search-box {
+      width: 100%;
+      max-width: 580px;
+      height: 48px;
+      border-radius: 24px;
+      border: 1px solid var(--browser-border);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+      box-shadow: 0 1px 6px rgba(32,33,36,0.08);
+    }
+
+    .apex-search-box svg {
+      width: 18px;
+      height: 18px;
+      fill: #9aa0a6;
+    }
+
+    .apex-search-text {
+      color: #9aa0a6;
+      font-size: 14px;
+    }
+
+    /* ================= 3. 视图二：房产网页 ================= */
+    .realty-container {
+      background-color: var(--realty-bg);
+      color: var(--realty-text);
+      min-height: 100%;
+    }
+
+    .realty-nav {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 64px;
+      border-bottom: 1px solid var(--realty-border);
+      background-color: rgba(253, 253, 252, 0.95);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .realty-logo {
+      font-family: var(--font-serif);
+      font-size: 18px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .realty-menu {
+      display: flex;
+      gap: 36px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--realty-muted);
+    }
+
+    .property-header {
+      text-align: center;
+      padding: 48px 24px 32px 24px;
+    }
+
+    .listing-badge {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #fff;
+      background-color: #111;
+      padding: 4px 10px;
+      display: inline-block;
+      margin-bottom: 20px;
+      border-radius: 2px;
+    }
+
+    .property-title {
+      font-family: var(--font-serif);
+      font-size: 46px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      margin-bottom: 12px;
+    }
+
+    .property-location {
+      font-size: 14px;
+      color: var(--realty-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .hero-gallery-wrapper {
+      width: 100%;
+      padding: 0 40px;
+      margin-bottom: 40px;
+    }
+
+    .main-image-stage {
+      width: 100%;
+      height: 78vh;
+      background-color: #f4f3f0;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #realty-main-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    #realty-main-img.active {
+      opacity: 1;
+    }
+
+    .nav-arrow-zone {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 12%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+
+    .main-image-stage:hover .nav-arrow-zone { opacity: 0.5; }
+    .nav-arrow-zone:hover { opacity: 1 !important; }
+
+    .arrow-left { left: 0; }
+    .arrow-right { right: 0; }
+
+    .arrow-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background-color: rgba(255,255,255,0.9);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-family: var(--font-serif);
+      color: #111;
+    }
+
+    .gallery-thumbs-row {
+      max-width: 1200px;
+      width: 100%;
+      margin: 16px auto 40px auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--realty-border);
+      padding: 0 40px 24px 40px;
+    }
+
+    #realty-caption-text {
+      flex: 1;
+      text-align: left;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--realty-muted);
+    }
+
+    #thumbs-box {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+
+    #photo-counter {
+      flex: 1;
+      text-align: right;
+      font-family: var(--font-serif);
+      font-size: 18px;
+      letter-spacing: 0.1em;
+      color: var(--realty-text);
+    }
+
+    .thumb-node {
+      width: 56px;
+      height: 36px;
+      border: 1px solid var(--realty-border);
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 0.4;
+      transition: all 0.2s;
+    }
+
+    .thumb-node img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .thumb-node:hover { opacity: 0.8; }
+    .thumb-node.active { opacity: 1; outline: 1px solid #111; transform: translateY(-2px); }
+
+    .property-details-section {
+      max-width: 1200px;
+      margin: 64px auto 80px auto;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 80px;
+      padding: 0 40px;
+    }
+
+    .prose-text {
+      font-size: 15px;
+      line-height: 1.8;
+      color: #333;
+      font-weight: 300;
+      margin-bottom: 24px;
+    }
+    .prose-text.lead {
+      font-family: var(--font-serif);
+      font-size: 24px;
+      color: #111;
+      line-height: 1.5;
+    }
+
+    .specs-box {
+      background-color: #fff;
+      border: 1px solid var(--realty-border);
+      padding: 32px;
+    }
+
+    /* 仅保留联系区块 */
+    .inquire-block {
+      margin-bottom: 28px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--realty-border);
+    }
+
+    .btn-inquire {
+      width: 100%;
+      background-color: #111;
+      color: #fff;
+      border: none;
+      padding: 16px 0;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .btn-inquire:hover {
+      background-color: #333;
+    }
+
+    .spec-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .spec-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+    .spec-key { color: var(--realty-muted); }
+    .spec-val { color: #111; font-weight: 500; }
+
+    footer.site-footer {
+      border-top: 1px solid var(--realty-border);
+      padding: 40px 64px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--realty-muted);
+      background-color: var(--realty-bg);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="browser-frame" id="browser-main-app">
+    
+    <!-- 顶部地址栏 -->
+    <div class="browser-toolbar">
+      <div class="nav-icons">
+        <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M12 4l-1.41 1.41L16.17 11H4v2h12.17l-5.58 5.59L12 20l8-8z"/></svg>
+        <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+      </div>
+
+      <div class="address-bar-container">
+        <svg class="ssl-icon" id="url-lock" viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+        <div class="address-text" id="url-text">
+          Search or enter web address
+        </div>
+      </div>
+    </div>
+
+    <!-- 真实的书签栏 (包含文件夹与下拉菜单) -->
+    <div class="browser-bookmarks">
+      
+      <!-- 文件夹按钮 (演员点击这里) -->
+      <div class="bookmark-folder-btn" id="folder-btn" onclick="toggleDropdown(event)">
+        <svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        Saved URLs
+      </div>
+
+      <!-- 下拉菜单：展示具体网址 -->
+      <div class="bookmark-dropdown" id="bm-dropdown">
+        <div class="dropdown-item" onclick="openPropertyLink()">
+          <div class="dropdown-title">
+            <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            The Shoreline Villa — Cape Serena
+          </div>
+          <div class="dropdown-url">https://horizon-realty.com/listings/cape-serena-v04</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 浏览器主视口 -->
+    <div class="browser-viewport" id="viewport-scroll">
+      
+      <!-- 视图 1：APEX 主页 -->
+      <div class="view-layer active" id="view-apex">
+        <div class="apex-home">
+          <div class="apex-logo">APEX</div>
+          <div class="apex-search-box">
+            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+            <div class="apex-search-text">Type a URL or search phrase...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 视图 2：高端房产网页 -->
+      <div class="view-layer" id="view-realty">
+        <div class="realty-container">
+          
+          <nav class="realty-nav">
+            <div class="realty-logo">HORIZON INTERNATIONAL PROPERTIES</div>
+            <div class="realty-menu">
+              <span>Waterfront</span>
+              <span>Private Islands</span>
+              <span>Acquisitions</span>
+              <span>Client Portal</span>
+            </div>
+          </nav>
+
+          <header class="property-header">
+            <span class="listing-badge">EXCLUSIVE LISTING · FOR SALE</span>
+            <h1 class="property-title">The Shoreline Villa</h1>
+            <div class="property-location">Cape Serena Shoreline, Southern Waters</div>
+          </header>
+
+          <div class="hero-gallery-wrapper">
+            <div class="main-image-stage">
+              <div class="nav-arrow-zone arrow-left" onclick="prevPhoto()" title="Previous">
+                <div class="arrow-circle">‹</div>
+              </div>
+
+              <img id="realty-main-img" src="" alt="Coastal Property">
+
+              <div class="nav-arrow-zone arrow-right" onclick="nextPhoto()" title="Next">
+                <div class="arrow-circle">›</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="gallery-thumbs-row">
+            <div id="realty-caption-text">PLATE I — MAIN COASTAL ELEVATION</div>
+            <div id="thumbs-box"></div>
+            <div id="photo-counter">01 / 05</div>
+          </div>
+
+          <div class="property-details-section">
+            <article>
+              <p class="prose-text lead">
+                A solitary seaside sanctuary built upon the natural granite of Cape Serena, bathed in unbroken southern sunlight.
+              </p>
+              <p class="prose-text">
+                Discreetly positioned along the tranquil southern shoreline, this whitewashed stone residence offers an absolute escape from urban surveillance and modern noise. Built with traditional lime plaster and natural stone, the house catches the early morning tide, offering panoramic views over open water.
+              </p>
+              <p class="prose-text">
+                With no immediate neighbors and direct access to a secluded stone inlet, this property serves as the ultimate private retreat.
+              </p>
+            </article>
+
+            <aside>
+              <div class="specs-box">
+                <!-- 价格已移除，仅保留联系屋主按钮 -->
+                <div class="inquire-block">
+                  <button class="btn-inquire">Contact Owner</button>
+                </div>
+
+                <div class="spec-grid">
+                  <div class="spec-item"><span class="spec-key">Tenure</span><span class="spec-val">Freehold (Private Treaty)</span></div>
+                  <div class="spec-item"><span class="spec-key">Internal Area</span><span class="spec-val">110 sq.m</span></div>
+                  <div class="spec-item"><span class="spec-key">Bedrooms</span><span class="spec-val">2 Rooms</span></div>
+                  <div class="spec-item"><span class="spec-key">Exterior</span><span class="spec-val">Sun Terrace & Private Inlet</span></div>
+                  <div class="spec-item"><span class="spec-key">Access</span><span class="spec-val">Shoreline / Boat Only</span></div>
+                </div>
+              </div>
+            </aside>
+          </div>
+
+          <footer class="site-footer">
+            <span>HORIZON INTERNATIONAL PROPERTIES © 2026</span>
+            <span>CAPE SERENA SERIES — ALL RIGHTS RESERVED</span>
+          </footer>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // 5 张真实海边白屋照片
+    const photos = [
+      { url: "https://cdn.phototourl.com/member/2026-10-20-a28dc8b0-55c1-46ad-a656-0d58a8d4cf6e.png", caption: "PLATE I — MAIN COASTAL ELEVATION & SHORELINE" },
+      { url: "https://cdn.phototourl.com/member/2026-10-20-39bf1195-fc1a-4456-a5f6-2dd3bd3f10fc.png", caption: "PLATE II — CLIFFSIDE FOUNDATION & HORIZON" },
+      { url: "https://cdn.phototourl.com/member/2026-10-20-4e3cac04-acf8-4b81-b2ad-937e130d3860.png", caption: "PLATE III — SUNLIT COURTYARD & PERGOLA" },
+      { url: "https://cdn.phototourl.com/member/2026-10-20-dc2c16e1-87ab-438f-a356-08e0b4c5e655.png", caption: "PLATE IV — WHITEWASHED PLASTER DETAIL" },
+      { url: "https://cdn.phototourl.com/member/2026-10-20-e4bb05a0-e2ea-4873-ac66-533ba8f4bb8b.png", caption: "PLATE V — THE SOLITARY SEAWARD OUTLOOK" }
+    ];
+
+    let currentPhotoIdx = 0;
+    const mainImg = document.getElementById('realty-main-img');
+    const counterText = document.getElementById('photo-counter');
+    const realtyCaption = document.getElementById('realty-caption-text');
+    const thumbsBox = document.getElementById('thumbs-box');
+    
+    // UI 控制元素
+    const urlText = document.getElementById('url-text');
+    const urlLock = document.getElementById('url-lock');
+    const viewportScroll = document.getElementById('viewport-scroll');
+    const dropdown = document.getElementById('bm-dropdown');
+    const folderBtn = document.getElementById('folder-btn');
+
+    // 预加载照片防止白屏
+    photos.forEach(p => {
+      const img = new Image();
+      img.src = p.url;
+    });
+
+    // 渲染缩略图
+    photos.forEach((p, idx) => {
+      const t = document.createElement('div');
+      t.className = `thumb-node ${idx === 0 ? 'active' : ''}`;
+      t.onclick = () => switchPhoto(idx);
+      
+      const img = document.createElement('img');
+      img.src = p.url;
+      t.appendChild(img);
+      thumbsBox.appendChild(t);
+    });
+
+    // 切换图片逻辑
+    function switchPhoto(idx, isInitial = false) {
+      if (idx === currentPhotoIdx && mainImg.src && !isInitial) return;
+      currentPhotoIdx = idx;
+      
+      if (!isInitial) {
+        mainImg.style.opacity = '0';
+      }
+      
+      const updateContent = () => {
+        mainImg.src = photos[currentPhotoIdx].url;
+        mainImg.onload = () => { mainImg.style.opacity = '1'; };
+        if (mainImg.complete) mainImg.style.opacity = '1';
+
+        counterText.innerText = `0${currentPhotoIdx + 1} / 0${photos.length}`;
+        realtyCaption.innerText = photos[currentPhotoIdx].caption;
+
+        const nodes = thumbsBox.getElementsByClassName('thumb-node');
+        Array.from(nodes).forEach((n, i) => n.classList.toggle('active', i === currentPhotoIdx));
+      };
+
+      if (isInitial) {
+        updateContent();
+      } else {
+        setTimeout(updateContent, 80);
+      }
+    }
+
+    function prevPhoto() {
+      const target = (currentPhotoIdx - 1 + photos.length) % photos.length;
+      switchPhoto(target);
+    }
+
+    function nextPhoto() {
+      const target = (currentPhotoIdx + 1) % photos.length;
+      switchPhoto(target);
+    }
+
+    // ================= 核心书签交互逻辑 =================
+    function toggleDropdown(event) {
+      event.stopPropagation();
+      dropdown.classList.toggle('show');
+      folderBtn.classList.toggle('active');
+    }
+
+    document.addEventListener('click', function(event) {
+      if (!dropdown.contains(event.target) && !folderBtn.contains(event.target)) {
+        dropdown.classList.remove('show');
+        folderBtn.classList.remove('active');
+      }
+    });
+
+    function openPropertyLink() {
+      dropdown.classList.remove('show');
+      folderBtn.classList.remove('active');
+
+      document.getElementById('view-apex').classList.remove('active');
+      document.getElementById('view-realty').classList.add('active');
+      
+      urlText.innerHTML = "<span>https://</span>horizon-realty.com/listings/cape-serena-v04";
+      urlLock.classList.add('secure');
+      
+      viewportScroll.scrollTop = 0;
+
+      if (!mainImg.src || mainImg.src === window.location.href) {
+        switchPhoto(0, true);
+      }
+    }
+
+    // 片场快捷键：按 Esc 键瞬间归位回 APEX 主页 (方便重拍)
+    function resetToApex() {
+      document.getElementById('view-realty').classList.remove('active');
+      document.getElementById('view-apex').classList.add('active');
+      dropdown.classList.remove('show');
+      folderBtn.classList.remove('active');
+      
+      urlText.innerHTML = "Search or enter web address";
+      urlLock.classList.remove('secure');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        resetToApex();
+      } else if (e.key === 'ArrowLeft' && document.getElementById('view-realty').classList.contains('active')) {
+        prevPhoto();
+      } else if ((e.key === 'ArrowRight' || e.key === ' ') && document.getElementById('view-realty').classList.contains('active')) {
+        nextPhoto();
+      }
+    });
+
+  </script>
+</body>
+</html>
